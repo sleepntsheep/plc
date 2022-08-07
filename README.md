@@ -42,4 +42,8 @@ clean all done task
 
     plc clean
 
+### but you wrote [ttask](https://github.com/sleepntsheep/ttask) 
 
+yes, but it's ncurses based which is slow, just using argv for input is simpler and a lot faster
+
+and also ttask is written in python 🤮
