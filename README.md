@@ -4,6 +4,8 @@ inspired by [please](https://github.com/NayamAmarshe/please)
 which i find take a bit too long to open
 so i made a more minimal version in C
 
+![scrshot](pics/scrshot.png)
+
 ### installation/ building
 
     sudo make install
