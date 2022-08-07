@@ -15,8 +15,10 @@ or to staticly compile with musl
     CC='musl-gcc -static -Os' make
 
 ### notes
-before using, create ~/.config/plc.txt or ~/plc.txt depending on your XDG variables, 
-i am too lazy to implement `creating the file if not exists` feature
+
+- plc is WIP, it may have bugs
+
+- before using, create ~/.config/plc.txt or ~/plc.txt depending on your XDG variables, because i am too lazy to implement `creating the file if not exists` feature
 
 ### usage
 
