@@ -4,6 +4,7 @@
 #include <string.h>
 #include "vec.h"
 #include "str.h"
+#include "log.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
@@ -96,6 +97,8 @@ read_tasks()
     char *p = getdatapath();
     /* read file to  string */
     FILE *fp = fopen(p, "r");
+    if (!fp)
+        panicerr("fopen: failed opening file");
     fseek(fp, 0, SEEK_END);
     size_t fsize = ftell(fp);
     fseek(fp, 0, SEEK_SET);

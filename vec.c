@@ -1,4 +1,6 @@
 #include "vec.h"
+#include "log.h"
+#include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -10,6 +12,13 @@ vec_init()
     v->c = VEC_INIT_SIZE;
     v->a = calloc(v->c, sizeof(void*));
     return v;
+}
+
+size_t
+check_index(struct vec *v, size_t i)
+{
+    if (i < 0 || i > v->l)
+        warn("vec: index out of bound");
 }
 
 void
@@ -47,17 +56,17 @@ vec_free(struct vec *v)
 struct vec *
 vec_del(struct vec *v, size_t i)
 {
+    check_index(v,i);
     free(v->a[i]);
-    v->l--;
-    for (; i < v->l; i++)
+    for (; i < v->l - 1; i++)
         v->a[i] = v->a[i+1];
+    v->l--;
     return v;
 }
 
 void *
 vec_at(struct vec *v, size_t i)
 {
-    if (i < 0 || i >= v->l)
-        return 0;
+    check_index(v,i);
     return v->a[i];
 }
