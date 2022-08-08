@@ -65,8 +65,7 @@ do_task(vec *v, size_t i)
 extern bool 
 done_task(vec *v, size_t i);
 
-inline
-bool
+inline bool
 done_task(vec *v, size_t i)
 {
     return ((str*)v->a[i])->b[1] == 'x';
@@ -82,13 +81,8 @@ void
 clean_task(vec *v)
 {
     for (int i = 0; i < v->l; i++)
-    {
         if (done_task(v,i))
-        {
-            del_task(v,i);
-            i--;
-        }
-    }
+            del_task(v,i--);
 }
 
 vec *
@@ -127,10 +121,7 @@ void
 show_tasks(vec *v)
 {
     for (int i = 0; i < v->l; i++)
-    {
-        char *p = SVEC(v,i)->b;
-        printf("%d %s\n", i, p);
-    }
+        printf("%d %s\n", i, SVEC(v,i)->b);
 }
 
 int 
@@ -140,17 +131,42 @@ main(int argc,
     vec *v = read_tasks();
 
     for (++argv;*argv;argv++)
+    {
         if (!strcmp(*argv, "add"))
-            add_task(v, argv[1]);
+        {
+            if (*(++argv) == NULL)
+                panic("add need argument");
+            str *task_name = str_init();
+            for (; *argv; argv++)
+            {
+                str_push(task_name, *argv);
+                if (argv[1] != NULL)
+                    str_push(task_name, " ");
+            }
+            add_task(v, task_name->b);
+            str_free(task_name);
+        }
         else if (!strcmp(*argv, "do"))
+        {
+            if (argv[1] == NULL)
+                panic("do need argument");
             do_task(v, strtol(argv[1], NULL, 10));
+        }
         else if (!strcmp(*argv, "clean"))
+        {
             clean_task(v);
+        }
         else if (!strcmp(*argv, "del"))
+        {
+            if (argv[1] == NULL)
+                panic("del need argument");
             del_task(v, strtol(argv[1], NULL, 10));
+        }
         else
             // print help
             ;
+    }
+
     show_tasks(v);
     write_tasks(v);
     vec_free(v);

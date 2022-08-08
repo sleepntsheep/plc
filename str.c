@@ -73,3 +73,9 @@ str_split_ch(struct str *s,
     return v;
 }
 
+void
+str_free(struct str *s)
+{
+    free(s->b);
+    free(s);
+}

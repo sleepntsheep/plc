@@ -25,6 +25,9 @@ struct vec *
 str_split_ch(struct str *s,
         char c);
 
+void
+str_free(struct str *s);
+
 void 
 str_npush(struct str *s,
         char *n, size_t len);
