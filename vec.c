@@ -19,6 +19,7 @@ check_index(struct vec *v, size_t i)
 {
     if (i < 0 || i > v->l)
         warn("vec: index out of bound");
+    return i;
 }
 
 void
@@ -67,6 +68,5 @@ vec_del(struct vec *v, size_t i)
 void *
 vec_at(struct vec *v, size_t i)
 {
-    check_index(v,i);
-    return v->a[i];
+    return v->a[check_index(v, i)];
 }

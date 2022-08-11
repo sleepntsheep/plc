@@ -5,6 +5,7 @@
 #include "vec.h"
 #include "str.h"
 #include "log.h"
+#include "termcolor.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
@@ -15,7 +16,21 @@
 typedef struct str str;
 typedef struct vec vec;
 
+typedef struct {
+    bool done;
+    str *name;
+} task;
+
 #define SVEC(v,i) ((str*)v->a[i])
+
+task *
+new_task(bool done, str *name)
+{
+    task *ret = malloc(sizeof(task *));
+    ret->done = done;
+    ret->name = name;
+    return ret;
+}
 
 char *
 getconfdir()
@@ -49,40 +64,17 @@ getdatapath()
 }
 
 void
-add_task(vec *v, char *s)
+do_task(task *t)
 {
-    vec_push(v, str_push(str_charp("[ ] "), s));
+    t->done ^= 1;
 }
 
 void
-do_task(vec *v, size_t i)
-{
-    char *p = SVEC(v,i)->b+1;
-    if (*p == 'x') *p = ' ';
-    else *p = 'x';
-}
-
-extern bool 
-done_task(vec *v, size_t i);
-
-inline bool
-done_task(vec *v, size_t i)
-{
-    return ((str*)v->a[i])->b[1] == 'x';
-}
-
-void
-del_task(vec *v, size_t i)
-{
-    vec_del(v, i);
-}
-
-void
-clean_task(vec *v)
+clean_tasks(vec *v)
 {
     for (int i = 0; i < v->l; i++)
-        if (done_task(v,i))
-            del_task(v,i--);
+        if (((task*)v->a[i])->done)
+            vec_del(v, i--);
 }
 
 vec *
@@ -100,28 +92,51 @@ read_tasks()
     fread(s, fsize, 1, fp);
     fclose(fp);
     /* split \n */
-    vec *v = str_split_ch(str_charp(s), '\n');
+    vec *lines = str_split_ch(str_charp(s), '\n');
+    /* free */
     free(s);
     free(p);
-    return v;
+    /* read tasks from vec str */
+    vec *tasks = vec_init();
+    for (size_t i = 0; i < lines->l; i++)
+    {
+        str *line = ((str*)lines->a[i]);
+        vec_push(tasks,
+            new_task(line->b[1] == 'x',
+                 str_charp(line->b+4)
+            )
+        );
+    }
+    vec_free(lines);
+    return tasks;
 }
 
 void
 write_tasks(vec *v)
 {
-    char *p = getdatapath();
-    FILE *fp = fopen(p, "w");
+    char *path = getdatapath();
+    FILE *fp = fopen(path, "w");
+    free(path);
     for (size_t i = 0; i < v->l; i++)
-        fprintf(fp, "%s\n", SVEC(v,i)->b);
-    free(p);
+    {
+        task *task = (v->a[i]);
+        fprintf(fp, "[%c] %s\n",
+            task->done ? 'x' : ' ',
+            task->name->b
+        );
+    }
     fclose(fp);
 }
 
 void
 show_tasks(vec *v)
 {
-    for (int i = 0; i < v->l; i++)
-        printf("%d %s\n", i, SVEC(v,i)->b);
+    for (size_t i = 0; i < v->l; i++)
+    {
+        task *task = v->a[i];
+        printf("%s", task->done ? FGGREEN : FGRED);
+        printf("%ld [%c] %s\n", i, task->done?'x':' ', task->name->b);
+    }
 }
 
 int 
@@ -139,32 +154,24 @@ main(int argc,
             str *task_name = str_init();
             for (; *argv; argv++)
             {
-                str_push(task_name, *argv);
                 if (argv[1] != NULL)
                     str_push(task_name, " ");
+                str_push(task_name, *argv);
             }
-            add_task(v, task_name->b);
-            str_free(task_name);
+            vec_push(v, new_task(false, task_name);
         }
         else if (!strcmp(*argv, "do"))
-        {
             if (argv[1] == NULL)
                 panic("do need argument");
-            do_task(v, strtol(argv[1], NULL, 10));
-        }
+            else 
+                do_task(vec_at(v, atoi(argv[1])));
         else if (!strcmp(*argv, "clean"))
-        {
-            clean_task(v);
-        }
+            clean_tasks(v);
         else if (!strcmp(*argv, "del"))
-        {
             if (argv[1] == NULL)
                 panic("del need argument");
-            del_task(v, strtol(argv[1], NULL, 10));
-        }
-        else
-            // print help
-            ;
+            else
+                vec_del(v, atoi(argv[1]);
     }
 
     show_tasks(v);

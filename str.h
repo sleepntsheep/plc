@@ -3,8 +3,10 @@
 #define PLC_STR_H
 
 #include <stddef.h>
+#include <stdio.h>
 #include "vec.h"
 
+typedef struct str str;
 struct str
 {
     char *b; // buffer
@@ -26,10 +28,20 @@ str_split_ch(struct str *s,
         char c);
 
 void
-str_free(struct str *s);
+str_free(void *s);
+
+void
+str_resize(struct str *s, size_t newsz);
 
 void 
 str_npush(struct str *s,
         char *n, size_t len);
+
+void
+str_sprintf(struct str *s,
+        const char *fmt, ...);
+
+struct str *
+str_aprintf(const char *fmt, ...);
 
 #endif

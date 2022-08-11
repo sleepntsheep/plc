@@ -1,7 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include "str.h"
 
+typedef struct str str;
 struct str *
 str_init()
 {
@@ -20,12 +23,6 @@ str_charp(char *p)
     return str;
 }
 
-void
-_str_extend(struct str *s)
-{
-    s->b = realloc(s->b, s->c *= 2);
-}
-
 struct str *
 str_push(struct str *s,
         char *n)
@@ -33,7 +30,7 @@ str_push(struct str *s,
     size_t nlen = strlen(n);
     if (s->l + nlen >= s->c)
         while (s->l + nlen >= s->c)
-            _str_extend(s);
+            str_resize(s, s->c * 2);
     strcpy(s->b+s->l, n);
     s->l += nlen;
     return s;
@@ -45,7 +42,7 @@ str_npush(struct str *s,
 {
     if (s->l + len >= s->c)
         while (s->l + len >= s->c)
-            _str_extend(s);
+            str_resize(s, s->c * 2);
     strncpy(s->b+s->l, n, len);
     s->l += len;
 }
@@ -60,7 +57,7 @@ str_split_ch(struct str *s,
     for (;;) 
     {
         char *sp = s->b + off;
-        linelen = strchr(sp, '\n') - sp;
+        linelen = strchr(sp, c) - sp;
         if (linelen <= 0) /* NULL  returned by strchr (no more \n) */
             break;
         char *line = malloc(linelen+2);
@@ -74,8 +71,67 @@ str_split_ch(struct str *s,
 }
 
 void
-str_free(struct str *s)
+str_free(void *s)
 {
-    free(s->b);
+    free(((str*)s)->b);
     free(s);
 }
+
+void
+str_resize(struct str *s, size_t newsz)
+{
+    if (newsz > s->c)
+    {
+        s->b = realloc(s->b, s->c = newsz);
+    }
+    else
+    {
+        if ((s->c = newsz) < s->l)
+        {
+            s->l = s->c;
+            s->b[s->l] = 0;
+        }
+    }
+}
+
+size_t
+__sprintf_sz(const char *fmt, ...)
+{
+    size_t len;
+    va_list args;
+    va_start(args, fmt);
+    len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+    return len;
+}
+
+void
+str_sprintf(struct str *s,
+        const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    size_t len = __sprintf_sz(fmt, args);
+    va_end(args);
+    if (s->c < len)
+        str_resize(s, len);
+    va_start(args, fmt);
+    vsnprintf(s->b, len, fmt, args);
+    va_end(args);
+}
+
+struct str *
+str_aprintf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    size_t len = __sprintf_sz(fmt, args);
+    va_end(args);
+    struct str *s = str_init();
+    str_resize(s, len);
+    va_start(args, fmt);
+    vsnprintf(s->b, len, fmt, args);
+    va_end(args);
+    return s;
+}
+
