@@ -6,7 +6,7 @@
 
 typedef struct str str;
 struct str *
-str_init()
+__str_init()
 {
     struct str *s = malloc(sizeof(struct str*));
     s->l = 0;
@@ -16,10 +16,11 @@ str_init()
 }
 
 struct str *
-str_charp(char *p)
+str_new(char *p)
 {
-    struct str *str = str_init();
-    str_push(str, p);
+    struct str *str = __str_init();
+    if (p != NULL)
+        str_push(str, p);
     return str;
 }
 
@@ -63,7 +64,7 @@ str_split_ch(struct str *s,
         char *line = malloc(linelen+2);
         strncpy(line, sp, linelen);
         line[linelen] = 0;
-        vec_push(v, str_charp(line));
+        vec_push(v, str_new(line));
         free(line);
         off += linelen + 1;
     }
@@ -71,7 +72,7 @@ str_split_ch(struct str *s,
 }
 
 void
-str_free(void *s)
+str_free(struct str *s)
 {
     free(((str*)s)->b);
     free(s);
@@ -127,7 +128,7 @@ str_aprintf(const char *fmt, ...)
     va_start(args, fmt);
     size_t len = __sprintf_sz(fmt, args);
     va_end(args);
-    struct str *s = str_init();
+    struct str *s = str_new(0);
     str_resize(s, len);
     va_start(args, fmt);
     vsnprintf(s->b, len, fmt, args);

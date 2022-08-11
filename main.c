@@ -21,8 +21,6 @@ typedef struct {
     str *name;
 } task;
 
-#define SVEC(v,i) ((str*)v->a[i])
-
 task *
 new_task(bool done, str *name)
 {
@@ -32,35 +30,25 @@ new_task(bool done, str *name)
     return ret;
 }
 
-char *
+str *
 getconfdir()
 {
     char *dir = 0;
     if (!(dir = getenv("XDG_CONFIG_HOME")))
         dir = getenv("HOME");
-    return dir;
+    return str_new(dir);
 }
 
-char *
+str *
 getconfpath()
 {
-    char *path = malloc(PATH_MAX);
-    char *dir = getconfdir();
-    size_t dirlen = strlen(dir);
-    strcpy(path, dir);
-    strcpy(path+dirlen, "/"PLC_CONF_FILE_NAME);
-    return path;
+    return str_push(getconfdir(), "/"PLC_CONF_FILE_NAME);
 }
 
-char *
+str *
 getdatapath()
 {
-    char *path = malloc(PATH_MAX);
-    char *dir = getconfdir();
-    size_t dirlen = strlen(dir);
-    strcpy(path, dir);
-    strcpy(path+dirlen, "/"PLC_DATA_FILE_NAME);
-    return path;
+    return str_push(getconfdir(), "/"PLC_DATA_FILE_NAME);
 }
 
 void
@@ -80,11 +68,12 @@ clean_tasks(vec *v)
 vec *
 read_tasks()
 {
-    char *p = getdatapath();
+    str *path = getdatapath();
     /* read file to  string */
-    FILE *fp = fopen(p, "r");
+    FILE *fp = fopen(path->b, "r");
     if (!fp)
         panicerr("fopen: failed opening file");
+    str_free(path);
     fseek(fp, 0, SEEK_END);
     size_t fsize = ftell(fp);
     fseek(fp, 0, SEEK_SET);
@@ -92,20 +81,15 @@ read_tasks()
     fread(s, fsize, 1, fp);
     fclose(fp);
     /* split \n */
-    vec *lines = str_split_ch(str_charp(s), '\n');
+    vec *lines = str_split_ch(str_new(s), '\n');
     /* free */
     free(s);
-    free(p);
     /* read tasks from vec str */
     vec *tasks = vec_init();
     for (size_t i = 0; i < lines->l; i++)
     {
         str *line = ((str*)lines->a[i]);
-        vec_push(tasks,
-            new_task(line->b[1] == 'x',
-                 str_charp(line->b+4)
-            )
-        );
+        vec_push(tasks, new_task(line->b[1] == 'x', str_new(line->b+4)));
     }
     vec_free(lines);
     return tasks;
@@ -114,9 +98,9 @@ read_tasks()
 void
 write_tasks(vec *v)
 {
-    char *path = getdatapath();
-    FILE *fp = fopen(path, "w");
-    free(path);
+    str *path = getdatapath();
+    FILE *fp = fopen(path->b, "w");
+    str_free(path);
     for (size_t i = 0; i < v->l; i++)
     {
         task *task = (v->a[i]);
@@ -151,14 +135,14 @@ main(int argc,
         {
             if (*(++argv) == NULL)
                 panic("add need argument");
-            str *task_name = str_init();
+            str *task_name = str_new(0);
             for (; *argv; argv++)
             {
                 if (argv[1] != NULL)
                     str_push(task_name, " ");
                 str_push(task_name, *argv);
             }
-            vec_push(v, new_task(false, task_name);
+            vec_push(v, new_task(false, task_name));
         }
         else if (!strcmp(*argv, "do"))
             if (argv[1] == NULL)
@@ -166,12 +150,16 @@ main(int argc,
             else 
                 do_task(vec_at(v, atoi(argv[1])));
         else if (!strcmp(*argv, "clean"))
+        {
             clean_tasks(v);
+        }
         else if (!strcmp(*argv, "del"))
+        {
             if (argv[1] == NULL)
                 panic("del need argument");
             else
-                vec_del(v, atoi(argv[1]);
+                vec_del(v, atoi(argv[1]));
+        }
     }
 
     show_tasks(v);

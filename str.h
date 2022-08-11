@@ -13,11 +13,8 @@ struct str
     size_t c, l; // capacity, length
 };
 
-struct str
-*str_init();
-
-struct str
-*str_charp(char *p);
+struct str *
+str_new(char *p);
 
 struct str *
 str_push(struct str *s,
@@ -28,7 +25,7 @@ str_split_ch(struct str *s,
         char c);
 
 void
-str_free(void *s);
+str_free(struct str *s);
 
 void
 str_resize(struct str *s, size_t newsz);
