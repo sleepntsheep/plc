@@ -26,6 +26,10 @@ vec_free(struct vec *v);
 struct vec *
 vec_del(struct vec *v, size_t i);
 
+void
+vec_sort(struct vec *v,
+        int (*compar)(const void*, const void*));
+
 void *
 vec_at(struct vec *v, size_t i);
 

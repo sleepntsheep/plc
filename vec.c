@@ -65,6 +65,13 @@ vec_del(struct vec *v, size_t i)
     return v;
 }
 
+void
+vec_sort(struct vec *v,
+        int (*compar)(const void*, const void*))
+{
+    qsort(v->a, v->l, sizeof(void*), compar);
+}
+
 void *
 vec_at(struct vec *v, size_t i)
 {

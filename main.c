@@ -21,6 +21,18 @@ typedef struct {
     str *name;
 } task;
 
+static int
+tasks_cmp(const void *_a, const void *_b)
+{
+    task *a = *((task**)_a);
+    task *b = *((task**)_b);
+    if (!a->done && b->done)
+        return 1;
+    if (a->done && !b->done)
+        return -1;
+    return strcmp(a->name->b, b->name->b);
+}
+
 task *
 new_task(bool done, str *name)
 {
@@ -145,10 +157,12 @@ main(int argc,
             vec_push(v, new_task(false, task_name));
         }
         else if (!strcmp(*argv, "do"))
+        {
             if (argv[1] == NULL)
                 panic("do need argument");
             else 
                 do_task(vec_at(v, atoi(argv[1])));
+        }
         else if (!strcmp(*argv, "clean"))
         {
             clean_tasks(v);
@@ -162,6 +176,7 @@ main(int argc,
         }
     }
 
+    vec_sort(v, tasks_cmp);
     show_tasks(v);
     write_tasks(v);
     vec_free(v);
