@@ -1,12 +1,15 @@
+
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "vec.h"
 #include "str.h"
 #include "log.h"
 #include "termcolor.h"
 #include "xmalloc.h"
+#include "arg.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
@@ -14,48 +17,40 @@
 #define PLC_DATA_FILE_NAME "plc.txt"
 
 typedef struct str str;
-typedef struct vec vec;
 
 typedef struct {
 	bool done;
-	str* name;
+	str  name;
 } task;
 
 static int
 tasks_cmp(const void* _a, const void* _b)
 {
-	task* a = *((task**)_a);
-	task* b = *((task**)_b);
-	if (!a->done && b->done)
+	task a = *((task*)_a);
+	task b = *((task*)_b);
+	if (!a.done && b.done)
 		return 1;
-	if (a->done && !b->done)
+	if (a.done && !b.done)
 		return -1;
-	return strcmp(a->name->b, b->name->b);
+	return strcmp(a.name.b, b.name.b);
 }
 
-task*
-new_task(bool done, str* name)
-{
-	task* ret = xmalloc(sizeof(*ret));
-	ret->done = done;
-	ret->name = name;
-	return ret;
-}
+#define new_task(done, name) (task){done, name};
 
-str*
+str
 getconfdir()
 {
-	char* dir = 0;
+	char* dir = NULL;
 	if (!(dir = getenv("XDG_CONFIG_HOME")))
 		if (!(dir = getenv("HOME")))
 			dir = ".";
-	return str_new(dir);
+	return cstr(dir);
 }
 
-str*
+str
 getdatapath()
 {
-	return str_push(getconfdir(), "/"PLC_DATA_FILE_NAME);
+	return str_cat(getconfdir(), "/"PLC_DATA_FILE_NAME);
 }
 
 void
@@ -65,18 +60,19 @@ do_task(task* t)
 }
 
 void
-clean_tasks(vec* v)
+clean_tasks(task* tasks)
 {
-	for (int i = 0; i < v->l; i++)
-		if (((task*)v->a[i])->done)
-			vec_del(v, i--);
+	for (int i = 0; i < arrlen(tasks); i++)
+		if (tasks[i].done)
+			arrdel(tasks, i);
 }
 
-vec*
+task*
 read_tasks()
 {
+	str path = getdatapath();
 	/* read file to  string */
-	FILE* fp = xfopen(getdatapath()->b, "ab+");
+	FILE* fp = xfopen(path.b, "ab+");
 	fseek(fp, 0L, SEEK_END);
 	size_t fsize = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
@@ -89,50 +85,50 @@ read_tasks()
 	* on MSVC compiler
 	*/
 #ifdef _WIN32
-	vec* lines = str_split_str(str_new(s), str_new(strdup("\r\n")));
+	str* lines = str_split_cstr(cstr(s), "\r\n");
 #else
-	vec* lines = str_split_ch(str_new(s), '\n');
+	str* lines = str_split(cstr(s), cstr("\n"));
 #endif
-	/* read tasks from vec str */
-	vec* tasks = vec_init();
-	for (size_t i = 0; i < lines->l; i++)
+	/* read tasks from str */
+	task* tasks = NULL;
+	for (size_t i = 0; i < arrlen(lines); i++)
 	{
-		str* line = ((str*)lines->a[i]);
-		if (line->l < 4)
+		if (lines[i].l < 4)
 			continue; // empty line
-		vec_push(tasks, new_task(line->b[1] == 'x', str_new(line->b + 4)));
+		arrput(tasks, ((task) {
+			.done = lines[i].b[1] == 'x',
+			.name = cstr(lines[i].b + 4)
+		}));
 	}
-	vec_free(lines);
 	return tasks;
 }
 
 void
-write_tasks(vec* v)
+write_tasks(task* tasks)
 {
-	str* path = getdatapath();
-	FILE* fp = xfopen(path->b, "w");
-	for (size_t i = 0; i < v->l; i++)
+	str path = getdatapath();
+	FILE* fp = xfopen(path.b, "w");
+	for (size_t i = 0; i < arrlen(tasks); i++)
 	{
-		task* task = v->a[i];
 		fprintf(fp, "[%c] %s\n",
-			task->done ? 'x' : ' ',
-			task->name->b
+			tasks[i].done ? 'x' : ' ',
+			tasks[i].name.b
 		);
 	}
-	str_free(path);
 	fclose(fp);
 }
 
 void
-show_tasks(vec* v)
+show_tasks(task* tasks)
 {
 	printf(FGBLUE);
 	puts("Hello!! Here is your tasks");
-	for (size_t i = 0; i < v->l; i++)
+	for (size_t i = 0; i < arrlen(tasks); i++)
 	{
-		task* task = v->a[i];
-		printf("%s", task->done ? FGGREEN : FGRED);
-		printf("%zd [%c] %s\n", i, task->done ? 'x' : ' ', task->name->b);
+		printf("%s", tasks[i].done ? FGGREEN : FGRED);
+		printf("%zd [%c] %s\n"
+			, i, tasks[i].done ? 'x' : ' '
+			, tasks[i].name.b);
 	}
 	printf(FGRST);
 }
@@ -141,46 +137,38 @@ int
 main(int argc,
 	char** argv)
 {
-	vec* v = read_tasks();
+	task* v = read_tasks();
 
-	for (int i = 1; i < argc; i++)
-	{
-		if (!strcmp(argv[i], "add"))
+	ARGBEGIN
+		ARGCMP("add") 
 		{
-			if (argv[++i] == NULL)
-				panic("add need argument");
-			str* task_name = str_new(0);
-			for (; i < argc; i++)
+			str t = str_new();
+			ALLARG
 			{
-				str_push(task_name, argv[i]);
-				if (i < argc - 1)
-					str_push(task_name, " ");
+				t = str_cat(t, argv[_i]);
+				if (argv[_i+1])
+					t = str_cat(t, " ");
 			}
-			vec_push(v, new_task(false, task_name));
+			arrput(v, ((task) { false, t }));
 		}
-		else if (!strcmp(argv[i], "do"))
+		ARGCMP("del")
 		{
-			if (argv[++i] == NULL)
-				panic("do need argument");
-			else
-				do_task(vec_at(v, atoi(argv[1])));
+			size_t i = strtoul(NARG, 0, 10);
+			arrdel(v, i);
 		}
-		else if (!strcmp(argv[i], "clean"))
+		ARGCMP("do")
+		{
+			do_task(v+strtoul(NARG, 0, 10));
+		}
+		ARGCMP("clean")
 		{
 			clean_tasks(v);
 		}
-		else if (!strcmp(argv[i], "del"))
-		{
-			if (argv[++i] == NULL)
-				panic("del need argument");
-			else
-				vec_del(v, atoi(argv[1]));
-		}
-	}
+	ARGEND
 
-	vec_sort(v, tasks_cmp);
+	qsort(v, arrlen(v),
+		sizeof(*v), tasks_cmp);
 	show_tasks(v);
 	write_tasks(v);
-	vec_free(v);
 	return 0;
 }

@@ -4,91 +4,90 @@
 #include <stdio.h>
 #include "str.h"
 #include "xmalloc.h"
+#undef STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
 
-typedef struct str str;
-struct str*
-	__str_init()
+struct str
+str_new()
 {
 	struct str* s = xmalloc(sizeof * s);
 	s->l = 0;
 	s->c = 512;
 	s->b = xcalloc(s->c, 1);
+	return *s;
+}
+
+struct str
+cstr(char* p)
+{
+	struct str s = str_new();
+	if (p == NULL)
+		return s;
+	size_t len = strlen(p);
+	s = str_resize(s, len+1);
+	s.l = len;
+	strcpy(s.b, p);
 	return s;
 }
 
-struct str*
-	str_new(char* p)
+struct str
+str_cat_str(struct str s,
+		struct str n)
 {
-	struct str* str = __str_init();
-	if (p != NULL)
-		str_push(str, p);
-	return str;
+	if (s.l + n.l >= s.c)
+		str_resize(s, s.l + n.l + 1);
+	strcpy(s.b + s.l, n.b);
+	s.l += n.l;
+	return s;
 }
 
-struct str*
-	str_push(struct str* s,
+struct str
+	str_cat_cstr(struct str s,
 		char* n)
 {
-	size_t nlen = strlen(n);
-	if (s->l + nlen >= s->c)
-		str_resize(s, s->l + nlen + 1);
-	strcpy(s->b + s->l, n);
-	s->l += nlen;
+	return str_cat_str(s, cstr(n));
+}
+
+struct str
+	str_npush(struct str s,
+		char* n, size_t len)
+{
+	if (s.l + len >= s.c)
+		str_resize(s, s.l + len + 1);
+	strncpy(s.b + s.l, n, len);
+	s.b[s.l] = 0;
+	s.l += len;
 	return s;
 }
 
 struct str*
-	str_npush(struct str* s,
-		char* n, size_t len)
+str_split_str(struct str haystack,
+	struct str needle)
 {
-	if (s->l + len >= s->c)
-		str_resize(s, s->l + len + 1);
-	strncpy(s->b + s->l, n, len);
-	s->l += len;
-	return s;
-}
-
-struct vec* str_split_str(struct str* haystack,
-	struct str* needle)
-{
-	struct vec* v = vec_init();
+	struct str* arr = NULL;
 	long off = 0;
 	long linelen = 0;
 	for (;;)
 	{
-		char* sp = haystack->b + off;
-		char* ch = strstr(sp, needle->b);
+		char* sp = haystack.b + off;
+		char* ch = strstr(sp, needle.b);
 		if (ch == NULL)
 			break;
 		linelen = ch - sp;
-		struct str* line = str_npush(str_new(0), sp, linelen);
-		str_push(line, ""); // add nil;
-		vec_push(v, line);
-		off += linelen + needle->l;
+		struct str line = str_npush(str_new(), sp, linelen);
+		
+		line = str_cat(line, ""); // add nil;
+		arrput(arr, line);
+		off += linelen + needle.l;
 	}
-	return v;
+	return arr;
 }
 
-struct vec* str_split_ch(struct str* s,
-	char c)
+struct str*
+	str_split_cstr(struct str haystack,
+		char* needle)
 {
-	struct vec* v = vec_init();
-	long off = 0;
-	long linelen = 0;
-	for (;;)
-	{
-		char* sp = s->b + off;
-		char* ch = strchr(sp, c);
-		if (!ch) break;
-		linelen = ch - sp;
-		char* line = xmalloc(linelen + 2);
-		strncpy(line, sp, linelen);
-		line[linelen] = 0;
-		vec_push(v, str_new(line));
-		free(line);
-		off += linelen + 1;
-	}
-	return v;
+	return str_split_str(haystack, cstr(needle));
 }
 
 void str_free(struct str* s)
@@ -97,17 +96,17 @@ void str_free(struct str* s)
 	free(s);
 }
 
-struct str*
-str_resize(struct str* s, size_t newsz)
+struct str
+str_resize(struct str s, size_t newsz)
 {
-	if (newsz > s->c)
+	if (newsz > s.c)
 	{
-		s->b = xrealloc(s->b, s->c = newsz);
+		s.b = xrealloc(s.b, s.c = newsz);
 	}
-	else if (newsz < s->l)
+	else if (newsz < s.l)
 	{
-		s->l = newsz;
-		s->b[s->l] = 0;
+		s.l = newsz;
+		s.b[s.l] = 0;
 	}
 	return s;
 }
@@ -123,32 +122,16 @@ __sprintf_sz(const char* fmt, ...)
 	return len;
 }
 
-void
-str_sprintf(struct str* s,
-	const char* fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	size_t len = __sprintf_sz(fmt, args);
-	va_end(args);
-	if (s->c < len)
-		str_resize(s, len);
-	va_start(args, fmt);
-	vsnprintf(s->b, len, fmt, args);
-	va_end(args);
-}
-
-struct str*
+struct str
 	str_aprintf(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
 	size_t len = __sprintf_sz(fmt, args);
 	va_end(args);
-	struct str* s = str_new(0);
-	str_resize(s, len);
+	struct str s = str_resize(str_new(), len);
 	va_start(args, fmt);
-	vsnprintf(s->b, len, fmt, args);
+	vsnprintf(s.b, len, fmt, args);
 	va_end(args);
 	return s;
 }

@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include "vec.h"
+
 
 typedef struct str str;
 struct str
@@ -13,35 +13,47 @@ struct str
 	size_t c, l; // capacity, length
 };
 
-struct str*
-	str_new(char* p);
+#define str_split(a,b) \
+	_Generic((b), \
+		struct str: str_split_str, \
+		default: str_split_cstr \
+	)(a,b)
 
-struct str*
-	str_push(struct str* s,
+#define str_cat(a,b) \
+	_Generic((b), \
+		struct str: str_cat_str, \
+		default: str_cat_cstr \
+	)(a,b)
+
+struct str
+str_new();
+
+struct str
+cstr(char* p);
+
+struct str
+str_cat_str(struct str s,
+		struct str n);
+
+struct str
+str_cat_cstr(struct str s,
 		char* n);
 
 struct str*
-	str_npush(struct str* s,
-		char* n, size_t len);
+str_split_str(struct str haystack,
+		struct str needle);
 
-struct vec* str_split_str(struct str* haystack,
-	struct str* needle);
-
-struct vec*
-	str_split_ch(struct str* s,
-		char c);
+struct str*
+str_split_cstr(struct str haystack,
+		char* needle);
 
 void
 str_free(struct str* s);
 
-struct str*
-	str_resize(struct str* s, size_t newsz);
+struct str
+str_resize(struct str s, size_t newsz);
 
-void
-str_sprintf(struct str* s,
-	const char* fmt, ...);
+struct str
+str_aprintf(const char* fmt, ...);
 
-struct str*
-	str_aprintf(const char* fmt, ...);
-
-#endif
+#endif /* PLC_STR_H */

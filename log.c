@@ -17,6 +17,7 @@ __stderr_log(const char *type, const char *file
     fprintf(stderr, "%s: %s:%d: ", type, file, line);
     va(vfprintf(stderr, fmt, a));
     fprintf(stderr, "\n");
+    fflush(stderr);
 }
 
 void
