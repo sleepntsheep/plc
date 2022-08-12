@@ -1,4 +1,3 @@
-
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include <stdbool.h>
@@ -35,8 +34,6 @@ tasks_cmp(const void* _a, const void* _b)
 	return strcmp(a.name.b, b.name.b);
 }
 
-#define new_task(done, name) (task){done, name};
-
 str
 getconfdir()
 {
@@ -50,7 +47,7 @@ getconfdir()
 str
 getdatapath()
 {
-	return str_cat(getconfdir(), "/"PLC_DATA_FILE_NAME);
+	return str_cat(str_dup(getconfdir()), "/"PLC_DATA_FILE_NAME);
 }
 
 void
@@ -87,7 +84,7 @@ read_tasks()
 #ifdef _WIN32
 	str* lines = str_split_cstr(cstr(s), "\r\n");
 #else
-	str* lines = str_split(cstr(s), cstr("\n"));
+	str* lines = str_split(cstr(s), "\n");
 #endif
 	/* read tasks from str */
 	task* tasks = NULL;
@@ -145,9 +142,9 @@ main(int argc,
 			str t = str_new();
 			ALLARG
 			{
-				t = str_cat(t, argv[_i]);
+				str_cat(&t, argv[_i]);
 				if (argv[_i+1])
-					t = str_cat(t, " ");
+					str_cat(&t, " ");
 			}
 			arrput(v, ((task) { false, t }));
 		}

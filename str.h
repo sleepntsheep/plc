@@ -32,11 +32,14 @@ struct str
 cstr(char* p);
 
 struct str
-str_cat_str(struct str s,
+str_cat_str(struct str* s,
 		struct str n);
 
+struct str*
+str_dup(struct str s);
+
 struct str
-str_cat_cstr(struct str s,
+str_cat_cstr(struct str* s,
 		char* n);
 
 struct str*
@@ -51,7 +54,7 @@ void
 str_free(struct str* s);
 
 struct str
-str_resize(struct str s, size_t newsz);
+str_resize(struct str* s, size_t newsz);
 
 struct str
 str_aprintf(const char* fmt, ...);

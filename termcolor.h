@@ -7,7 +7,7 @@
 #define FGRED _FG(9)
 #define FGGREEN _FG(3)
 #define FGBLUE _FG(4)
-#define FGRST _FG(9)
+#define FGRST "\033[39m"
 
 
 

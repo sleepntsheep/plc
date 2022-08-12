@@ -10,11 +10,9 @@
 struct str
 str_new()
 {
-	struct str* s = xmalloc(sizeof * s);
-	s->l = 0;
-	s->c = 512;
-	s->b = xcalloc(s->c, 1);
-	return *s;
+	//struct str* s = xmalloc(sizeof * s);
+	char* b = xcalloc(512, 1);
+	return (struct str){ b, 512, 0 } ;
 }
 
 struct str
@@ -24,25 +22,25 @@ cstr(char* p)
 	if (p == NULL)
 		return s;
 	size_t len = strlen(p);
-	s = str_resize(s, len+1);
+	s = str_resize(&s, len+1);
 	s.l = len;
 	strcpy(s.b, p);
 	return s;
 }
 
 struct str
-str_cat_str(struct str s,
+str_cat_str(struct str* s,
 		struct str n)
 {
-	if (s.l + n.l >= s.c)
-		str_resize(s, s.l + n.l + 1);
-	strcpy(s.b + s.l, n.b);
-	s.l += n.l;
-	return s;
+	if (s->l + n.l >= s->c)
+		str_resize(s, s->l + n.l + 1);
+	strcpy(s->b + s->l, n.b);
+	s->l += n.l;
+	return *s;
 }
 
 struct str
-	str_cat_cstr(struct str s,
+str_cat_cstr(struct str* s,
 		char* n)
 {
 	return str_cat_str(s, cstr(n));
@@ -53,7 +51,7 @@ struct str
 		char* n, size_t len)
 {
 	if (s.l + len >= s.c)
-		str_resize(s, s.l + len + 1);
+		str_resize(&s, s.l + len + 1);
 	strncpy(s.b + s.l, n, len);
 	s.b[s.l] = 0;
 	s.l += len;
@@ -75,8 +73,7 @@ str_split_str(struct str haystack,
 			break;
 		linelen = ch - sp;
 		struct str line = str_npush(str_new(), sp, linelen);
-		
-		line = str_cat(line, ""); // add nil;
+        str_cat(&line, ""); // nil terminator
 		arrput(arr, line);
 		off += linelen + needle.l;
 	}
@@ -97,18 +94,18 @@ void str_free(struct str* s)
 }
 
 struct str
-str_resize(struct str s, size_t newsz)
+str_resize(struct str* s, size_t newsz)
 {
-	if (newsz > s.c)
+	if (newsz > s->c)
 	{
-		s.b = xrealloc(s.b, s.c = newsz);
+		s->b = xrealloc(s->b, s->c = newsz);
 	}
-	else if (newsz < s.l)
+	else if (newsz < s->l)
 	{
-		s.l = newsz;
-		s.b[s.l] = 0;
+		s->l = newsz;
+		s->b[s->l] = 0;
 	}
-	return s;
+	return *s;
 }
 
 size_t
@@ -129,10 +126,20 @@ struct str
 	va_start(args, fmt);
 	size_t len = __sprintf_sz(fmt, args);
 	va_end(args);
-	struct str s = str_resize(str_new(), len);
+	struct str s = str_resize(str_dup(str_new()), len);
 	va_start(args, fmt);
 	vsnprintf(s.b, len, fmt, args);
 	va_end(args);
 	return s;
+}
+
+struct str*
+    str_dup(struct str s)
+{
+    struct str* ret = xcalloc(1, sizeof(*ret));
+    ret->b = s.b;
+    ret->l = s.l;
+    ret->c = s.c;
+    return ret;
 }
 
