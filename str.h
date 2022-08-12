@@ -9,36 +9,39 @@
 typedef struct str str;
 struct str
 {
-    char *b; // buffer
-    size_t c, l; // capacity, length
+	char* b; // buffer
+	size_t c, l; // capacity, length
 };
 
-struct str *
-str_new(char *p);
+struct str*
+	str_new(char* p);
 
-struct str *
-str_push(struct str *s,
-        char *n);
+struct str*
+	str_push(struct str* s,
+		char* n);
 
-struct vec *
-str_split_ch(struct str *s,
-        char c);
+struct str*
+	str_npush(struct str* s,
+		char* n, size_t len);
 
-void
-str_free(struct str *s);
+struct vec* str_split_str(struct str* haystack,
+	struct str* needle);
 
-void
-str_resize(struct str *s, size_t newsz);
-
-void 
-str_npush(struct str *s,
-        char *n, size_t len);
+struct vec*
+	str_split_ch(struct str* s,
+		char c);
 
 void
-str_sprintf(struct str *s,
-        const char *fmt, ...);
+str_free(struct str* s);
 
-struct str *
-str_aprintf(const char *fmt, ...);
+struct str*
+	str_resize(struct str* s, size_t newsz);
+
+void
+str_sprintf(struct str* s,
+	const char* fmt, ...);
+
+struct str*
+	str_aprintf(const char* fmt, ...);
 
 #endif

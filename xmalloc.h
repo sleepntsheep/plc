@@ -10,4 +10,6 @@ void *xmalloc(size_t size);
 void *xcalloc(size_t nmemb, size_t size);
 void *xrealloc(void *ptr, size_t size);
 
+FILE* xfopen(const char* s, const char* mode);
+
 #endif /* S_XMALLOC_H */

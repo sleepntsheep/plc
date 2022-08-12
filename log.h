@@ -20,27 +20,27 @@ __stderr_log(const char *type, const char *file,
 
 void
 _panic(const char *file, const int line,
-        const char *fmt);
+        const char *fmt, ...);
 
 void
 _panicerr(const char *file, const int line,
-        const char *fmt);
+        const char *fmt, ...);
 
 void
 _warn(const char *file, const int line,
-        const char *fmt);
+        const char *fmt, ...);
 
 void
 _warnerr(const char *file, const int line,
-        const char *fmt);
+        const char *fmt, ...);
 
 void
 _info(const char *file, const int line,
-        const char *fmt);
+        const char *fmt, ...);
 
 void
 _infoerr(const char *file, const int line,
-        const char *fmt);
+        const char *fmt, ...);
 
 #endif
 
