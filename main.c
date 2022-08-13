@@ -120,11 +120,12 @@ show_tasks(task* tasks)
 {
 	printf(FGBLUE);
 	puts("Hello!! Here is your tasks");
+    int idxlen = snprintf(NULL, 0, "%zd", arrlen(tasks));
 	for (size_t i = 0; i < arrlen(tasks); i++)
 	{
 		printf("%s", tasks[i].done ? FGGREEN : FGRED);
-		printf("%zd [%c] %s\n"
-			, i, tasks[i].done ? 'x' : ' '
+		printf("%*zd [%c] %s\n"
+			, idxlen, i, tasks[i].done ? 'x' : ' '
 			, tasks[i].name.b);
 	}
 	printf(FGRST);

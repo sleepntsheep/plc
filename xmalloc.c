@@ -5,7 +5,7 @@
 
 void *check_alloc(void *ptr) {
     if (ptr == NULL)
-        panic("allocation failed");
+        warn("allocation failed");
     return ptr;
 }
 
@@ -18,13 +18,14 @@ void *xcalloc(size_t nmemb, size_t size) {
 }
 
 void *xrealloc(void *ptr, size_t size) {
-    if (size == 0) return warn("realloc: size 0"), NULL;
+    if (size == 0) 
+        return warn("realloc: size 0"), NULL;
     return check_alloc(realloc(ptr, size));
 }
 
 FILE *xfopen(const char* s, const char* mode) {
     FILE* fp = fopen(s, mode);
     if (fp == NULL)
-        panic("xfopen: failed opening %s with mode %s", s, mode);
+        warn("xfopen: failed opening %s with mode %s", s, mode);
     return fp;
 }
