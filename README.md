@@ -29,14 +29,21 @@ show all tasks
 add task
 
     plc add <taskname>
+    plc add task name, with space will be joined automatically
 
 delete task
 
     plc del <task index>
+    plc del <1> <2> <3> ...
 
 mask task as done/ undone
 
     plc do <task index>
+    plc do <1> <2> <3> ...
+
+sort all tasks
+
+    plc sort
 
 clean all done task
 
