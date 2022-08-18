@@ -20,13 +20,13 @@ typedef struct str str;
 typedef struct {
 	bool done;
 	str  name;
-} task;
+} task_t;
 
 static int
 tasks_cmp(const void* _a, const void* _b)
 {
-	task a = *((task*)_a);
-	task b = *((task*)_b);
+	task_t a = *((task_t*)_a);
+	task_t b = *((task_t*)_b);
 	if (!a.done && b.done)
 		return 1;
 	if (a.done && !b.done)
@@ -51,20 +51,20 @@ getdatapath()
 }
 
 void
-do_task(task* t)
+do_task(task_t* t)
 {
 	t->done ^= 1;
 }
 
 void
-clean_tasks(task* tasks)
+clean_tasks(task_t* tasks)
 {
 	for (int i = 0; i < arrlen(tasks); i++)
 		if (tasks[i].done)
 			arrdel(tasks, i);
 }
 
-task*
+task_t *
 read_tasks()
 {
 	str path = getdatapath();
@@ -87,12 +87,12 @@ read_tasks()
 	str* lines = str_split(cstr(s), "\n");
 #endif
 	/* read tasks from str */
-	task* tasks = NULL;
+	task_t* tasks = NULL;
 	for (size_t i = 0; i < arrlen(lines); i++)
 	{
 		if (lines[i].l < 4)
 			continue; // empty line
-		arrput(tasks, ((task) {
+		arrput(tasks, ((task_t) {
 			.done = lines[i].b[1] == 'x',
 			.name = cstr(lines[i].b + 4)
 		}));
@@ -101,7 +101,7 @@ read_tasks()
 }
 
 void
-write_tasks(task* tasks)
+write_tasks(task_t* tasks)
 {
 	str path = getdatapath();
 	FILE* fp = xfopen(path.b, "w");
@@ -116,7 +116,7 @@ write_tasks(task* tasks)
 }
 
 void
-show_tasks(task* tasks)
+show_tasks(task_t* tasks)
 {
 	printf(FGBLUE);
 	puts("Hello!! Here is your tasks");
@@ -131,11 +131,18 @@ show_tasks(task* tasks)
 	printf(FGRST);
 }
 
+void
+sort_tasks(task_t *v)
+{
+	qsort(v, arrlen(v),
+		sizeof(*v), tasks_cmp);
+}
+
 int
 main(int argc,
 	char** argv)
 {
-	task* v = read_tasks();
+	task_t* v = read_tasks();
 
 	ARGBEGIN
 		ARGCMP("add") 
@@ -143,29 +150,38 @@ main(int argc,
 			str t = str_new();
 			ALLARG
 			{
-				str_cat(&t, argv[_i]);
+				str_cat(&t, CARG);
 				if (argv[_i+1])
 					str_cat(&t, " ");
 			}
-			arrput(v, ((task) { false, t }));
+			arrput(v, ((task_t) { false, t }));
 		}
 		ARGCMP("del")
 		{
-			size_t i = strtoul(NARG, 0, 10);
-			arrdel(v, i);
+			ALLARG
+			{
+                size_t i = strtoul(CARG, 0, 10);
+                arrdel(v, i);
+            }
 		}
 		ARGCMP("do")
 		{
-			do_task(v+strtoul(NARG, 0, 10));
+			ALLARG
+			{
+                size_t i = strtoul(CARG, 0, 10);
+                do_task(v+i);
+            }
 		}
 		ARGCMP("clean")
 		{
 			clean_tasks(v);
 		}
+        ARGCMP("sort")
+        {
+            sort_tasks(v);
+        }
 	ARGEND
 
-	qsort(v, arrlen(v),
-		sizeof(*v), tasks_cmp);
 	show_tasks(v);
 	write_tasks(v);
 	return 0;

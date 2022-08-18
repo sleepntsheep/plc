@@ -120,7 +120,7 @@ __sprintf_sz(const char* fmt, ...)
 }
 
 struct str
-	str_aprintf(const char* fmt, ...)
+str_aprintf(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -134,7 +134,7 @@ struct str
 }
 
 struct str*
-    str_dup(struct str s)
+str_dup(struct str s)
 {
     struct str* ret = xcalloc(1, sizeof(*ret));
     ret->b = s.b;

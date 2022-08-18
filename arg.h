@@ -8,6 +8,8 @@
 
 #define ARGCMP(x) else if (strcmp(argv[_i], x) == 0)
 
+#define CARG (argv[_i])
+
 #define NARG ((_i + 1 < argc ? \
 				argv[++_i] : \
 				(panic("need argument"), (char*)0)))
