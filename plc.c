@@ -1,19 +1,26 @@
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
+#define SHEEP_DYNARRAY_IMPLEMENTATION
+#include "dynarray.h"
+#define SHEEP_STR_HAVE_STB_DS
+#define SHEEP_STR_IMPLEMENTATION
+#include "str.h"
+#define SHEEP_LOG_IMPLEMENTATION
+#include "log.h"
+#include "arg.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "str.h"
-#include "log.h"
-#include "termcolor.h"
-#include "xmalloc.h"
-#include "arg.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
 #endif /* PATH_MAX */
 #define PLC_DATA_FILE_NAME "plc.txt"
+
+#define _FG(x) "\033[38;5;"#x"m"
+#define FGRED _FG(9)
+#define FGGREEN _FG(3)
+#define FGBLUE _FG(4)
+#define FGRST "\033[39m"
 
 typedef struct str str;
 
@@ -59,7 +66,7 @@ do_task(task_t* t)
 void
 clean_tasks(task_t* tasks)
 {
-	for (int i = 0; i < arrlen(tasks); i++)
+	for (size_t i = 0; i < arrlen(tasks); i++)
 		if (tasks[i].done)
 			arrdel(tasks, i);
 }
@@ -69,11 +76,11 @@ read_tasks()
 {
 	str path = getdatapath();
 	/* read file to  string */
-	FILE* fp = xfopen(path.b, "ab+");
+	FILE* fp = fopen(path.b, "ab+");
 	fseek(fp, 0L, SEEK_END);
 	size_t fsize = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
-	char* s = xcalloc(fsize + 1, 1);
+	char* s = calloc(fsize + 1, 1);
 	fread(s, 1, fsize, fp);
 	fclose(fp);
 	/* split newline
@@ -87,12 +94,12 @@ read_tasks()
 	str* lines = str_split(cstr(s), "\n");
 #endif
 	/* read tasks from str */
-	task_t* tasks = NULL;
+	task_t* tasks = arrnew(task_t);
 	for (size_t i = 0; i < arrlen(lines); i++)
 	{
 		if (lines[i].l < 4)
 			continue; // empty line
-		arrput(tasks, ((task_t) {
+		arrpush(tasks, ((task_t) {
 			.done = lines[i].b[1] == 'x',
 			.name = cstr(lines[i].b + 4)
 		}));
@@ -104,7 +111,7 @@ void
 write_tasks(task_t* tasks)
 {
 	str path = getdatapath();
-	FILE* fp = xfopen(path.b, "w");
+	FILE* fp = fopen(path.b, "w");
 	for (size_t i = 0; i < arrlen(tasks); i++)
 	{
 		fprintf(fp, "[%c] %s\n",
@@ -154,7 +161,7 @@ main(int argc,
 				if (argv[_i+1])
 					str_cat(&t, " ");
 			}
-			arrput(v, ((task_t) { false, t }));
+			arrpush(v, ((task_t) { false, t }));
 		}
 		ARGCMP("del")
 		{
@@ -184,5 +191,6 @@ main(int argc,
 
 	show_tasks(v);
 	write_tasks(v);
+    arrfree(v);
 	return 0;
 }
