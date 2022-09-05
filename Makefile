@@ -1,4 +1,4 @@
-CFLAGS := -std=c11 -pedantic -Wall -Wextra -g #-fsanitize=address
+CFLAGS := -std=c99 -pedantic -Wall -Wextra -g #-fsanitize=address
 LIBS :=
 SRCS := *.c
 

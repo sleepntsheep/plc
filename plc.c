@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "config.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
@@ -21,8 +22,6 @@
 #define FGGREEN _FG(3)
 #define FGBLUE _FG(4)
 #define FGRST "\033[39m"
-
-typedef struct str str;
 
 typedef struct {
 	bool done;
@@ -54,7 +53,7 @@ getconfdir()
 str
 getdatapath()
 {
-	return str_cat(str_dup(getconfdir()), "/"PLC_DATA_FILE_NAME);
+	return str_cat_cstr(str_dup(getconfdir()), "/"PLC_DATA_FILE_NAME);
 }
 
 void
@@ -91,7 +90,7 @@ read_tasks()
 #ifdef _WIN32
 	str* lines = str_split_cstr(cstr(s), "\r\n");
 #else
-	str* lines = str_split(cstr(s), "\n");
+	str* lines = str_split_cstr(cstr(s), "\n");
 #endif
 	/* read tasks from str */
 	task_t* tasks = arrnew(task_t);
@@ -126,7 +125,7 @@ void
 show_tasks(task_t* tasks)
 {
 	printf(FGBLUE);
-	puts("Hello!! Here is your tasks");
+	puts(welcome_message);
     int idxlen = snprintf(NULL, 0, "%zd", arrlen(tasks));
 	for (size_t i = 0; i < arrlen(tasks); i++)
 	{
@@ -157,9 +156,9 @@ main(int argc,
 			str t = str_new();
 			ALLARG
 			{
-				str_cat(&t, CARG);
+				str_cat_cstr(&t, CARG);
 				if (argv[_i+1])
-					str_cat(&t, " ");
+					str_cat_cstr(&t, " ");
 			}
 			arrpush(v, ((task_t) { false, t }));
 		}
