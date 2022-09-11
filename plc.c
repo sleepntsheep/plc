@@ -1,10 +1,11 @@
 #define SHEEP_DYNARRAY_IMPLEMENTATION
-#include "dynarray.h"
-#define SHEEP_STR_HAVE_STB_DS
+#include <sheeplib/dynarray.h>
 #define SHEEP_STR_IMPLEMENTATION
-#include "str.h"
+#include <sheeplib/str.h>
 #define SHEEP_LOG_IMPLEMENTATION
-#include "log.h"
+#include <sheeplib/log.h>
+#define SHEEP_SJSON_IMPLEMENTATION
+#include <sheeplib/sjson.h>
 #include "arg.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,6 +16,8 @@
 #ifndef PATH_MAX
 #define PATH_MAX 1024
 #endif /* PATH_MAX */
+
+#define PLC_CONF_FILE_NAME "plc.json"
 #define PLC_DATA_FILE_NAME "plc.txt"
 
 #define _FG(x) "\033[38;5;"#x"m"
@@ -28,9 +31,11 @@ typedef struct {
 	str  name;
 } task_t;
 
-static int
-tasks_cmp(const void* _a, const void* _b)
-{
+char *welcome_message;
+char confpath[PATH_MAX];
+task_t *tasks;
+
+static int tasks_cmp(const void* _a, const void* _b) {
 	task_t a = *((task_t*)_a);
 	task_t b = *((task_t*)_b);
 	if (!a.done && b.done)
@@ -40,95 +45,35 @@ tasks_cmp(const void* _a, const void* _b)
 	return strcmp(a.name.b, b.name.b);
 }
 
-str
-getconfdir()
-{
+char *confdir() {
 	char* dir = NULL;
 	if (!(dir = getenv("XDG_CONFIG_HOME")))
 		if (!(dir = getenv("HOME")))
 			dir = ".";
-	return cstr(dir);
+	return (dir);
 }
 
-str
-getdatapath()
-{
-	return str_cat_cstr(str_dup(getconfdir()), "/"PLC_DATA_FILE_NAME);
-}
-
-void
-do_task(task_t* t)
-{
+void do_task(task_t* t) {
 	t->done ^= 1;
 }
 
-void
-clean_tasks(task_t* tasks)
-{
-	for (size_t i = 0; i < arrlen(tasks); i++)
-		if (tasks[i].done)
-			arrdel(tasks, i);
+str read_file(str path) {
+    FILE* fp = fopen(path.b, "ab+");
+    fseek(fp, 0L, SEEK_END);
+    size_t fsize = ftell(fp);
+    fseek(fp, 0L, SEEK_SET);
+    char* s = calloc(fsize + 1, 1);
+    fread(s, 1, fsize, fp);
+    fclose(fp);
+    return str_from_c(s);
 }
 
-task_t *
-read_tasks()
-{
-	str path = getdatapath();
-	/* read file to  string */
-	FILE* fp = fopen(path.b, "ab+");
-	fseek(fp, 0L, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
-	char* s = calloc(fsize + 1, 1);
-	fread(s, 1, fsize, fp);
-	fclose(fp);
-	/* split newline
-	* we opened file with ab+, so there's no \r\n and \n translation going on
-	* if we don't open file as binary, SEEK_END and SEEK_SET will break 
-	* on MSVC compiler
-	*/
-#ifdef _WIN32
-	str* lines = str_split_cstr(cstr(s), "\r\n");
-#else
-	str* lines = str_split_cstr(cstr(s), "\n");
-#endif
-	/* read tasks from str */
-	task_t* tasks = arrnew(task_t);
-	for (size_t i = 0; i < arrlen(lines); i++)
-	{
-		if (lines[i].l < 4)
-			continue; // empty line
-		arrpush(tasks, ((task_t) {
-			.done = lines[i].b[1] == 'x',
-			.name = cstr(lines[i].b + 4)
-		}));
-	}
-	return tasks;
-}
-
-void
-write_tasks(task_t* tasks)
-{
-	str path = getdatapath();
-	FILE* fp = fopen(path.b, "w");
-	for (size_t i = 0; i < arrlen(tasks); i++)
-	{
-		fprintf(fp, "[%c] %s\n",
-			tasks[i].done ? 'x' : ' ',
-			tasks[i].name.b
-		);
-	}
-	fclose(fp);
-}
-
-void
-show_tasks(task_t* tasks)
-{
+void show_tasks() {
 	printf(FGBLUE);
-	puts(welcome_message);
+	if (welcome_message != NULL)
+        puts(welcome_message);
     int idxlen = snprintf(NULL, 0, "%zd", arrlen(tasks));
-	for (size_t i = 0; i < arrlen(tasks); i++)
-	{
+	for (size_t i = 0; i < arrlen(tasks); i++) {
 		printf("%s", tasks[i].done ? FGGREEN : FGRED);
 		printf("%*zd [%c] %s\n"
 			, idxlen, i, tasks[i].done ? 'x' : ' '
@@ -137,18 +82,48 @@ show_tasks(task_t* tasks)
 	printf(FGRST);
 }
 
-void
-sort_tasks(task_t *v)
-{
-	qsort(v, arrlen(v),
-		sizeof(*v), tasks_cmp);
+sjson *read_config() {
+    str content = read_file(str_from_c(confpath));
+    sjsontokarr *toks = sjson_lex(content.b);
+    sjson *json = sjson_parse(toks);
+    if (json->type == SJSON_INVALID)
+        json = sjson_new(SJSON_OBJECT);
+    return json;
 }
 
-int
-main(int argc,
-	char** argv)
-{
-	task_t* v = read_tasks();
+int main(int argc, char** argv) {
+    strcpy(confpath, confdir());
+    strcat(confpath, "/"PLC_CONF_FILE_NAME);
+
+    sjson *json = read_config();
+    //sjson_register_logger(printf); 
+    tasks = arrnew(task_t);
+
+    {
+        sjson *welcome_message_json, *data_json;
+        welcome_message_json = sjson_object_get(json, "welcome_message");
+        if (welcome_message_json != NULL &&
+            welcome_message_json->type == SJSON_STRING) {
+            welcome_message = welcome_message_json->stringvalue;
+        }
+        data_json = sjson_object_get(json, "data");
+        if (data_json != NULL &&
+            data_json->type == SJSON_ARRAY) {
+            sjson_foreach(data_json, task_json) {
+                sjson *task_done, *task_name;
+                if (task_json->type != SJSON_OBJECT)
+                    continue;
+                task_done = sjson_object_get(task_json, "done");
+                task_name = sjson_object_get(task_json, "name");
+                task_t new_task = {
+                    .done = (task_done->type == SJSON_TRUE),
+                    .name = str_from_c(task_name->stringvalue)
+                };
+                arrpush(tasks, new_task);
+            }
+        }
+    }
+
 
 	ARGBEGIN
 		ARGCMP("add") 
@@ -156,18 +131,20 @@ main(int argc,
 			str t = str_new();
 			ALLARG
 			{
-				str_cat_cstr(&t, CARG);
+				str_catc(&t, CARG);
 				if (argv[_i+1])
-					str_cat_cstr(&t, " ");
+					str_catc(&t, " ");
 			}
-			arrpush(v, ((task_t) { false, t }));
+			arrpush(tasks, ((task_t) { false, t }));
 		}
 		ARGCMP("del")
 		{
+            int deled = 0;
 			ALLARG
 			{
-                size_t i = strtoul(CARG, 0, 10);
-                arrdel(v, i);
+                int i = strtoul(CARG, 0, 10);
+                arrdel(tasks, i - deled);
+                deled++;
             }
 		}
 		ARGCMP("do")
@@ -175,21 +152,44 @@ main(int argc,
 			ALLARG
 			{
                 size_t i = strtoul(CARG, 0, 10);
-                do_task(v+i);
+                do_task(tasks+i);
             }
 		}
 		ARGCMP("clean")
 		{
-			clean_tasks(v);
+            for (size_t i = 0; i < arrlen(tasks); i++)
+                if (tasks[i].done)
+                    arrdel(tasks, i);
 		}
         ARGCMP("sort")
         {
-            sort_tasks(v);
+            qsort(tasks, arrlen(tasks),
+                sizeof(*tasks), tasks_cmp);
         }
 	ARGEND
 
-	show_tasks(v);
-	write_tasks(v);
-    arrfree(v);
+
+	show_tasks();
+
+    { 
+        sjson *data_json = sjson_new(SJSON_ARRAY);
+        for (size_t i = 0; i < arrlen(tasks); i++) {
+            sjson *task_json = sjson_new(SJSON_OBJECT);
+            sjson *done_json = sjson_new(tasks[i].done ? 
+                    SJSON_TRUE : SJSON_FALSE);
+            sjson *name_json = sjson_new(SJSON_STRING);
+            name_json->stringvalue = tasks[i].name.b;
+            sjson_object_set(task_json, "done", done_json);
+            sjson_object_set(task_json, "name", name_json);
+            sjson_array_push(data_json, task_json);
+        }
+        sjson_object_set(json, "data", data_json);
+        FILE *fp = fopen(confpath, "w");
+        //sjson_debug_print(json, 1);
+        sjson_deserialize(fp, json);
+        fclose(fp);
+    }
+
+    arrfree(tasks);
 	return 0;
 }
