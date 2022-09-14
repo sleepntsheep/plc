@@ -11,14 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "config.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
 #endif /* PATH_MAX */
 
 #define PLC_CONF_FILE_NAME "plc.json"
-#define PLC_DATA_FILE_NAME "plc.txt"
 
 #define _FG(x) "\033[38;5;"#x"m"
 #define FGRED _FG(9)
@@ -50,7 +48,7 @@ char *confdir() {
 	if (!(dir = getenv("XDG_CONFIG_HOME")))
 		if (!(dir = getenv("HOME")))
 			dir = ".";
-	return (dir);
+	return dir;
 }
 
 void do_task(task_t* t) {
@@ -84,8 +82,7 @@ void show_tasks() {
 
 sjson *read_config() {
     str content = read_file(str_from_c(confpath));
-    sjsontokarr *toks = sjson_lex(content.b);
-    sjson *json = sjson_parse(toks);
+    sjson *json = sjson_serialize(content.b, content.l);
     if (json->type == SJSON_INVALID)
         json = sjson_new(SJSON_OBJECT);
     return json;

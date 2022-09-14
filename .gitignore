@@ -4,4 +4,5 @@ plc.txt
 plc
 plc.exe
 x64
-/.vs
+/.vs*
+target

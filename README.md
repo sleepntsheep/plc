@@ -1,3 +1,6 @@
+## PLC IS SUPRESEDED BY [plc-rs](https://codeberg.org/sleepntsheep/plc-rs), USE THAT INSTEAD
+
+
 ### plc is a cli task manager
 
 inspired by [please](https://github.com/NayamAmarshe/please)
