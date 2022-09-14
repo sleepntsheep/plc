@@ -1,4 +1,4 @@
-## PLC IS SUPRESEDED BY [plc-rs](https://codeberg.org/sleepntsheep/plc-rs), USE THAT INSTEAD
+## PLC IS SUPRESEDED BY [plc.rs](https://codeberg.org/sleepntsheep/plc.rs), USE THAT INSTEAD
 
 
 ### plc is a cli task manager
